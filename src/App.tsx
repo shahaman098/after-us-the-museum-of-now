@@ -298,14 +298,6 @@ function App() {
               Photograph one ordinary object. Preserve what it meant to be human
               in 2026.
             </p>
-            <div className="premise-actions">
-              <button className="primary-button" onClick={() => setSection("contribute")}>
-                Contribute an Object
-              </button>
-              <button className="ghost-button" onClick={() => setSection("museum")}>
-                Enter the Museum
-              </button>
-            </div>
           </div>
 
           <ContributionPanel

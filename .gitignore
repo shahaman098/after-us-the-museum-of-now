@@ -5,3 +5,8 @@ dist/
 .env.*
 coverage/
 site/
+.playwright-cli/
+output/
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
