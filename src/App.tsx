@@ -1,4 +1,10 @@
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type Exhibit = {
   id: string;
@@ -16,9 +22,19 @@ type Exhibit = {
   reactions: number;
 };
 
-type Section = "home" | "contribute" | "museum" | "census";
+type Section = "home" | "contribute" | "museum" | "census" | "detail";
 
 const asset = (name: string) => `/assets/${name}`;
+
+const DEMO_OBJECT = "House key";
+const DEMO_MEANING = "This opened my first home.";
+const DEMO_IMAGE = asset("upload-key.png");
+
+const heroSlides = [
+  { image: asset("hero-key-case.jpg") },
+  { image: asset("hero-threshold.jpg") },
+  { image: asset("hero-archive.jpg") },
+];
 
 const seedExhibits: Exhibit[] = [
   {
@@ -128,6 +144,35 @@ const seedExhibits: Exhibit[] = [
   },
 ];
 
+const themesOnView = [
+  "Belonging",
+  "Independence",
+  "Family",
+  "Survival",
+  "Memory",
+  "Care",
+  "Work & Purpose",
+  "Play & Joy",
+];
+
+const ritualSteps = [
+  {
+    n: "01",
+    title: "Photograph",
+    copy: "Capture one ordinary object that still carries meaning.",
+  },
+  {
+    n: "02",
+    title: "Transform",
+    copy: "AFTER US catalogs it as a future museum exhibit from 2526.",
+  },
+  {
+    n: "03",
+    title: "Accumulate",
+    copy: "It enters the gallery and updates the Census of Us.",
+  },
+];
+
 function loadExhibits() {
   try {
     const saved = window.localStorage.getItem("after-us-exhibits");
@@ -152,11 +197,17 @@ function getTopCounts(exhibits: Exhibit[], key: "theme" | "category") {
 
 function chooseTheme(text: string) {
   const source = text.toLowerCase();
-  if (source.match(/home|belong|room|door|key|place/)) return "Belonging";
-  if (source.match(/mother|father|grand|child|family|friend|dog/)) return "Family";
+  if (source.match(/home|belong|room|door|key|place|threshold/))
+    return "Belonging";
+  if (source.match(/mother|father|grand|child|family|friend|dog/))
+    return "Family";
   if (source.match(/survive|hard|grief|safe|carry|lost/)) return "Survival";
-  if (source.match(/remember|memory|past|old|photo|handwriting/)) return "Memory";
+  if (source.match(/remember|memory|past|old|photo|handwriting|recipe/))
+    return "Memory";
   if (source.match(/work|study|make|build|job/)) return "Work & Purpose";
+  if (source.match(/city|move|independen|alone|focus|self|freedom/))
+    return "Independence";
+  if (source.match(/care|love|hold|comfort|heal/)) return "Care";
   return "Care";
 }
 
@@ -170,34 +221,73 @@ function inferCategory(objectName: string) {
   return "Everyday Tools";
 }
 
+function inferMaterial(objectName: string) {
+  const source = objectName.toLowerCase();
+  if (source.includes("key")) return "Brass";
+  if (source.includes("mug")) return "Ceramic";
+  if (source.includes("shoe")) return "Mesh, rubber";
+  if (source.includes("plush") || source.includes("toy"))
+    return "Cotton, polyester";
+  if (source.includes("card")) return "Plastic";
+  if (source.includes("note") || source.includes("recipe")) return "Paper, ink";
+  if (source.includes("headphone")) return "Plastic, foam, copper";
+  return "Mixed material";
+}
+
 function createExhibit(
   objectName: string,
   userMeaning: string,
   location: string,
   imageUrl: string,
 ): Exhibit {
-  const theme = chooseTheme(`${objectName} ${userMeaning}`);
-  const category = inferCategory(objectName);
   const cleanName = objectName.trim() || "Unnamed object";
+  const meaning = userMeaning.trim();
+  const isDemoKey =
+    cleanName.toLowerCase() === "house key" &&
+    meaning.toLowerCase() === DEMO_MEANING.toLowerCase();
+
+  if (isDemoKey) {
+    return {
+      id: `exhibit-${Date.now()}`,
+      objectName: cleanName,
+      originalImageUrl: imageUrl,
+      userMeaning: meaning,
+      futureTitle: "Key to the First Threshold",
+      futureInterpretation:
+        "Recovered from an early twenty-first century city dwelling, this brass key marked the fragile border between precarity and belonging. Its owner remembered it not as a tool, but as proof that a private room could become a life.",
+      theme: "Belonging",
+      category: "Home & Space",
+      material: "Brass",
+      location: location.trim() || undefined,
+      createdAt: new Date().toISOString(),
+      views: 1,
+      reactions: 0,
+    };
+  }
+
+  const theme = chooseTheme(`${cleanName} ${meaning}`);
+  const category = inferCategory(cleanName);
   const titleMap: Record<string, string> = {
-    Belonging: `${cleanName} of the First Place`,
-    Family: `${cleanName} for Keeping Someone Near`,
-    Survival: `${cleanName} That Carried the Body`,
+    Belonging: `Relic of the First ${cleanName}`,
+    Family: `${cleanName} Kept Close`,
+    Survival: `${cleanName} That Endured`,
     Memory: `${cleanName} Against Forgetting`,
     "Work & Purpose": `${cleanName} for Making a Day`,
+    Independence: `${cleanName} for Moving Alone`,
     Care: `${cleanName} of Ordinary Care`,
+    "Rituals & Memory": `Vessel of Daily Return`,
   };
 
   return {
     id: `exhibit-${Date.now()}`,
     objectName: cleanName,
     originalImageUrl: imageUrl,
-    userMeaning: userMeaning.trim(),
-    futureTitle: titleMap[theme],
-    futureInterpretation: `Cataloged in 2526, this ${cleanName.toLowerCase()} is understood as evidence that people in 2026 placed memory inside useful things. The contributor's sentence, "${userMeaning.trim()}", suggests an object valued less for rarity than for the life it quietly held together.`,
+    userMeaning: meaning,
+    futureTitle: titleMap[theme] ?? `${cleanName}, Cataloged`,
+    futureInterpretation: `Cataloged in the year 2526, this ${cleanName.toLowerCase()} is read as evidence that people in 2026 stored memory inside useful things. The contributor wrote, "${meaning}" — a sentence that turns utility into biography.`,
     theme,
     category,
-    material: "Mixed material",
+    material: inferMaterial(cleanName),
     location: location.trim() || undefined,
     createdAt: new Date().toISOString(),
     views: 1,
@@ -205,16 +295,28 @@ function createExhibit(
   };
 }
 
+function formatCatalogDate(value: string) {
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 function App() {
   const [section, setSection] = useState<Section>("home");
+  const [navOpen, setNavOpen] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
   const [exhibits, setExhibits] = useState<Exhibit[]>(loadExhibits);
   const [selectedExhibit, setSelectedExhibit] = useState<Exhibit>(exhibits[0]);
   const [generatedExhibit, setGeneratedExhibit] = useState<Exhibit>(exhibits[0]);
-  const [objectName, setObjectName] = useState("House key");
-  const [meaning, setMeaning] = useState("This opened my first home.");
+  const [objectName, setObjectName] = useState(DEMO_OBJECT);
+  const [meaning, setMeaning] = useState(DEMO_MEANING);
   const [location, setLocation] = useState("");
-  const [imagePreview, setImagePreview] = useState(asset("upload-key.png"));
+  const [imagePreview, setImagePreview] = useState(DEMO_IMAGE);
   const [isPublished, setIsPublished] = useState(false);
+  const [isCataloging, setIsCataloging] = useState(false);
+  const [justPublishedId, setJustPublishedId] = useState<string | null>(null);
 
   const themeCounts = useMemo(() => getTopCounts(exhibits, "theme"), [exhibits]);
   const categoryCounts = useMemo(
@@ -222,17 +324,80 @@ function App() {
     [exhibits],
   );
   const maxThemeCount = Math.max(...themeCounts.map(([, count]) => count), 1);
+  const maxCategoryCount = Math.max(
+    ...categoryCounts.map(([, count]) => count),
+    1,
+  );
+  const recentExhibits = exhibits.slice(0, 4);
+  const visitorContributions = exhibits.filter((item) =>
+    item.id.startsWith("exhibit-"),
+  ).length;
+  const isDemoLoaded =
+    objectName === DEMO_OBJECT &&
+    meaning === DEMO_MEANING &&
+    imagePreview === DEMO_IMAGE;
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setSlideIndex((current) => (current + 1) % heroSlides.length);
+    }, 7000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setNavOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navOpen]);
+
+  const goTo = (next: Section) => {
+    setSection(next);
+    setNavOpen(false);
+    const id =
+      next === "home"
+        ? "home"
+        : next === "contribute"
+          ? "contribute"
+          : next === "museum"
+            ? "museum"
+            : next === "census"
+              ? "census"
+              : "detail";
+    window.requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+    });
+  };
+
+  const loadDemoObject = () => {
+    setObjectName(DEMO_OBJECT);
+    setMeaning(DEMO_MEANING);
+    setLocation("");
+    setImagePreview(DEMO_IMAGE);
+    setIsPublished(false);
+    goTo("contribute");
+  };
 
   const publishExhibit = (event: FormEvent) => {
     event.preventDefault();
-    const next = createExhibit(objectName, meaning, location, imagePreview);
-    const nextExhibits = [next, ...exhibits];
-    setGeneratedExhibit(next);
-    setSelectedExhibit(next);
-    setExhibits(nextExhibits);
-    saveExhibits(nextExhibits);
-    setIsPublished(true);
-    setSection("museum");
+    if (!objectName.trim() || !meaning.trim() || isCataloging) return;
+
+    setIsCataloging(true);
+
+    window.setTimeout(() => {
+      const next = createExhibit(objectName, meaning, location, imagePreview);
+      const nextExhibits = [next, ...exhibits];
+      setGeneratedExhibit(next);
+      setSelectedExhibit(next);
+      setExhibits(nextExhibits);
+      saveExhibits(nextExhibits);
+      setIsPublished(true);
+      setJustPublishedId(next.id);
+      setIsCataloging(false);
+      goTo("detail");
+    }, 900);
   };
 
   const handleImage = (event: ChangeEvent<HTMLInputElement>) => {
@@ -241,7 +406,10 @@ function App() {
 
     const reader = new FileReader();
     reader.onload = () => {
-      if (typeof reader.result === "string") setImagePreview(reader.result);
+      if (typeof reader.result === "string") {
+        setImagePreview(reader.result);
+        setIsPublished(false);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -252,356 +420,627 @@ function App() {
     setGeneratedExhibit(next[0]);
     setSelectedExhibit(next[0]);
     saveExhibits(next);
-    setObjectName("House key");
-    setMeaning("This opened my first home.");
+    setObjectName(DEMO_OBJECT);
+    setMeaning(DEMO_MEANING);
     setLocation("");
-    setImagePreview(asset("upload-key.png"));
+    setImagePreview(DEMO_IMAGE);
     setIsPublished(false);
+    setJustPublishedId(null);
   };
 
   return (
-    <div className="app-shell">
-      <header className="site-header">
-        <button className="brand" onClick={() => setSection("home")}>
-          <span>AFTER US</span>
-          <small>The Museum of Now</small>
-        </button>
-        <nav aria-label="Primary navigation">
-          {(["home", "contribute", "museum", "census"] as Section[]).map(
-            (item) => (
-              <button
-                className={section === item ? "active" : ""}
-                key={item}
-                onClick={() => setSection(item)}
-              >
-                {item === "home"
-                  ? "Home"
-                  : item === "museum"
-                    ? "Museum"
-                    : item === "census"
-                      ? "Census"
-                      : "Contribute"}
-              </button>
-            ),
-          )}
-        </nav>
-        <button className="header-action" onClick={() => setSection("contribute")}>
-          Contribute an Object
-        </button>
-      </header>
+    <div className={`page-wrapper ${navOpen ? "visible-sidebar" : ""}`}>
+      <aside className="hidden-bar" aria-label="Museum navigation">
+        <div className="nav-toggler">
+          <button
+            aria-expanded={navOpen}
+            aria-label="Open menu"
+            className="hidden-bar-opener"
+            onClick={() => setNavOpen(true)}
+            type="button"
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
+
+        <div className="hidden-bar-closer">
+          <button
+            aria-label="Close menu"
+            onClick={() => setNavOpen(false)}
+            type="button"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="hidden-bar-wrapper">
+          <button className="logo-box" onClick={() => goTo("home")} type="button">
+            <strong>AFTER US</strong>
+            <small>The Museum of Now</small>
+          </button>
+
+          <nav className="side-menu">
+            <ul>
+              {(
+                [
+                  ["home", "Home"],
+                  ["contribute", "Contribute"],
+                  ["museum", "Gallery"],
+                  ["census", "Census of Us"],
+                  ["detail", "Exhibit"],
+                ] as const
+              ).map(([id, label]) => (
+                <li className={section === id ? "current" : ""} key={id}>
+                  <button onClick={() => goTo(id)} type="button">
+                    {label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <p className="side-note">
+            One object. One sentence. One public museum from the year 2526.
+          </p>
+          <button className="side-demo" onClick={loadDemoObject} type="button">
+            Try the demo object →
+          </button>
+        </div>
+      </aside>
+
+      {navOpen ? (
+        <button
+          aria-label="Close navigation overlay"
+          className="nav-backdrop"
+          onClick={() => setNavOpen(false)}
+          type="button"
+        />
+      ) : null}
 
       <main>
-        <section className="hero-grid" id="home">
-          <div className="premise">
-            <h1>The Museum of Now</h1>
-            <p>
-              Photograph one ordinary object. Preserve what it meant to be human
-              in 2026.
+        <section className="main-slider" id="home">
+          {heroSlides.map((slide, index) => (
+            <div
+              className={`slide ${index === slideIndex ? "active" : ""}`}
+              key={slide.image}
+              style={{ backgroundImage: `url(${slide.image})` }}
+            />
+          ))}
+          <div className="slide-veil" />
+          <div className="slide-content">
+            <p className="hero-eyebrow">Catalog year 2526</p>
+            <h1>AFTER US</h1>
+            <p className="hero-product">The Museum of Now</p>
+            <p className="hero-support">
+              Photograph one ordinary object. Turn it into a museum exhibit from
+              2526 — then watch it join the public collection.
+            </p>
+            <div className="cta-row">
+              <button
+                className="theme-btn btn-style-one"
+                onClick={loadDemoObject}
+                type="button"
+              >
+                Try the Ready Demo
+              </button>
+              <button
+                className="theme-btn btn-style-four"
+                onClick={() => goTo("museum")}
+                type="button"
+              >
+                Enter the Gallery
+              </button>
+            </div>
+            <p className="hero-hint">
+              Demo loaded: house key · “This opened my first home.”
             </p>
           </div>
-
-          <ContributionPanel
-            handleImage={handleImage}
-            imagePreview={imagePreview}
-            isPublished={isPublished}
-            meaning={meaning}
-            objectName={objectName}
-            onSubmit={publishExhibit}
-            setLocation={setLocation}
-            setMeaning={setMeaning}
-            setObjectName={setObjectName}
-            location={location}
-          />
-
-          <ExhibitCase exhibit={generatedExhibit} />
-
-          <CensusPanel
-            categoryCounts={categoryCounts}
-            exhibits={exhibits}
-            maxThemeCount={maxThemeCount}
-            setSection={setSection}
-            themeCounts={themeCounts}
-          />
-        </section>
-
-        <section className="collection-rail" id="museum">
-          <div className="section-heading">
-            <div>
-              <h2>Newest in the collection</h2>
-              <p>Every object enters the same public institution.</p>
-            </div>
-            <button onClick={resetDemo}>Reset demo collection</button>
-          </div>
-          <div className="gallery-row">
-            {exhibits.map((exhibit) => (
+          <div className="slide-dots" aria-label="Hero slides">
+            {heroSlides.map((slide, index) => (
               <button
-                className={
-                  selectedExhibit.id === exhibit.id
-                    ? "gallery-item selected"
-                    : "gallery-item"
-                }
-                key={exhibit.id}
-                onClick={() => {
-                  setSelectedExhibit(exhibit);
-                  setSection("museum");
-                }}
-              >
-                <img src={exhibit.originalImageUrl} alt="" />
-                <span>{exhibit.objectName}</span>
-                <small>{exhibit.theme}</small>
-              </button>
+                aria-label={`Show slide ${index + 1}`}
+                className={index === slideIndex ? "active" : ""}
+                key={slide.image}
+                onClick={() => setSlideIndex(index)}
+                type="button"
+              />
             ))}
           </div>
         </section>
 
-        <section className="detail-and-census">
-          <ExhibitDetail exhibit={selectedExhibit} />
-          <CensusHall
-            categoryCounts={categoryCounts}
-            exhibits={exhibits}
-            themeCounts={themeCounts}
-          />
-        </section>
-      </main>
-    </div>
-  );
-}
-
-function ContributionPanel({
-  handleImage,
-  imagePreview,
-  isPublished,
-  location,
-  meaning,
-  objectName,
-  onSubmit,
-  setLocation,
-  setMeaning,
-  setObjectName,
-}: {
-  handleImage: (event: ChangeEvent<HTMLInputElement>) => void;
-  imagePreview: string;
-  isPublished: boolean;
-  location: string;
-  meaning: string;
-  objectName: string;
-  onSubmit: (event: FormEvent) => void;
-  setLocation: (value: string) => void;
-  setMeaning: (value: string) => void;
-  setObjectName: (value: string) => void;
-}) {
-  return (
-    <form className="contribution-panel" id="contribute" onSubmit={onSubmit}>
-      <div className="panel-title">
-        <h2>Contribute an Object</h2>
-        <div className="steps" aria-label="Contribution steps">
-          <span>1 Photograph</span>
-          <span>2 Describe</span>
-          <span>3 Publish</span>
-        </div>
-      </div>
-
-      <div className="contribution-body">
-        <label className="photo-drop">
-          <img src={imagePreview} alt="Object preview" />
-          <input accept="image/*" onChange={handleImage} type="file" />
-          <span>Upload photo</span>
-        </label>
-
-        <div className="field-stack">
-          <label>
-            What is it?
-            <input
-              onChange={(event) => setObjectName(event.target.value)}
-              required
-              value={objectName}
-            />
-          </label>
-          <label>
-            What did it mean in 2026?
-            <textarea
-              maxLength={140}
-              onChange={(event) => setMeaning(event.target.value)}
-              required
-              value={meaning}
-            />
-          </label>
-          <label>
-            Location, optional
-            <input
-              onChange={(event) => setLocation(event.target.value)}
-              placeholder="City or campus"
-              value={location}
-            />
-          </label>
-        </div>
-      </div>
-
-      <button className="primary-button wide" type="submit">
-        Generate and Publish
-      </button>
-      <p className="public-note">
-        Your submission is public and permanent inside the shared museum.
-        {isPublished ? " The Census of Us has updated." : ""}
-      </p>
-    </form>
-  );
-}
-
-function ExhibitCase({ exhibit }: { exhibit: Exhibit }) {
-  return (
-    <article className="exhibit-case" aria-label="Generated exhibit">
-      <div className="artifact-window">
-        <img src={asset("artifact-key-case.png")} alt="" />
-      </div>
-      <div className="catalog-card">
-        <div className="catalog-line">AFTER US CATALOG - 2526.17.8841</div>
-        <h2>{exhibit.futureTitle}</h2>
-        <div className="catalog-meta">
-          <span>
-            Year 2526
-            <small>Cataloged</small>
-          </span>
-          <span>
-            {exhibit.objectName}
-            <small>Object</small>
-          </span>
-          <span>
-            {exhibit.theme}
-            <small>Theme</small>
-          </span>
-        </div>
-        <blockquote>"{exhibit.userMeaning}"</blockquote>
-      </div>
-    </article>
-  );
-}
-
-function CensusPanel({
-  categoryCounts,
-  exhibits,
-  maxThemeCount,
-  setSection,
-  themeCounts,
-}: {
-  categoryCounts: [string, number][];
-  exhibits: Exhibit[];
-  maxThemeCount: number;
-  setSection: (section: Section) => void;
-  themeCounts: [string, number][];
-}) {
-  return (
-    <aside className="census-panel" id="census">
-      <h2>Census of Us</h2>
-      <div className="orbital-map" aria-hidden="true">
-        <span />
-        <span />
-        <span />
-      </div>
-      <p className="stat-label">Objects preserved</p>
-      <strong>{exhibits.length.toLocaleString()}</strong>
-      <p className="stat-caption">From every place. By everyday people.</p>
-      <div className="mini-bars">
-        {themeCounts.slice(0, 6).map(([theme, count]) => (
-          <div className="bar-line" key={theme}>
-            <span>{theme}</span>
-            <div>
-              <i style={{ width: `${(count / maxThemeCount) * 100}%` }} />
-            </div>
-            <b>{Math.round((count / exhibits.length) * 100)}%</b>
+        <section className="info-banner">
+          <div className="auto-container">
+            <h3>
+              AFTER US is a public museum where one ordinary object from your life
+              becomes an exhibit from the year 2526.
+            </h3>
           </div>
-        ))}
-      </div>
-      <p className="category-note">
-        Top category: {categoryCounts[0]?.[0] ?? "Awaiting first object"}
-      </p>
-      <button className="outline-button" onClick={() => setSection("census")}>
-        Explore Census
-      </button>
-    </aside>
-  );
-}
+        </section>
 
-function ExhibitDetail({ exhibit }: { exhibit: Exhibit }) {
-  return (
-    <article className="detail-panel">
-      <div>
-        <p className="catalog-line">Single exhibit detail</p>
-        <h2>{exhibit.futureTitle}</h2>
-        <p>{exhibit.futureInterpretation}</p>
-      </div>
-      <div className="detail-media">
-        <img src={exhibit.originalImageUrl} alt={exhibit.objectName} />
-        <div>
-          <h3>{exhibit.objectName}</h3>
-          <p>"{exhibit.userMeaning}"</p>
-          <dl>
-            <div>
-              <dt>Theme</dt>
-              <dd>{exhibit.theme}</dd>
+        <section className="ritual-section" aria-label="How AFTER US works">
+          <div className="auto-container ritual-grid">
+            {ritualSteps.map((step) => (
+              <article className="ritual-card" key={step.n}>
+                <span>{step.n}</span>
+                <h3>{step.title}</h3>
+                <p>{step.copy}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="history-section">
+          <div className="history-grid">
+            <div className="content-column">
+              <div className="sec-title">
+                <span className="title">The Premise</span>
+                <h2>History of the Present</h2>
+              </div>
+              <p>
+                Most people never get preserved by institutions. Their ordinary
+                objects disappear with them. AFTER US reframes one meaningful
+                object from an ordinary person as future history — not as an AI
+                novelty, but as evidence of what it meant to be human in 2026.
+              </p>
+              <p>
+                Contribute one photograph and one sentence. The museum transforms
+                it into a cataloged exhibit, then publishes it into the growing
+                collection and Census of Us.
+              </p>
+              <button
+                className="theme-btn btn-style-two"
+                onClick={loadDemoObject}
+                type="button"
+              >
+                Begin with the Demo Object
+              </button>
             </div>
-            <div>
-              <dt>Category</dt>
-              <dd>{exhibit.category}</dd>
+            <div className="image-column">
+              <img
+                alt="Catalog rendering of a preserved house key"
+                src={asset("artifact-key-case.png")}
+              />
             </div>
+          </div>
+        </section>
+
+        <section className="feature-section">
+          <div className="auto-container feature-grid">
             <div>
-              <dt>Material</dt>
-              <dd>{exhibit.material}</dd>
+              <div className="sec-title">
+                <span className="title">Halls</span>
+                <h2>On View</h2>
+              </div>
+              <p>
+                The museum organizes contributions by emotional theme — the
+                reasons people choose to preserve what they preserve.
+              </p>
             </div>
-            {exhibit.location ? (
+            <ul className="features-list">
+              {themesOnView.map((theme) => (
+                <li key={theme}>
+                  <button onClick={() => goTo("museum")} type="button">
+                    {theme}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <section className="contribute-section" id="contribute">
+          <div className="auto-container">
+            <div className="sec-title-two text-center">
+              <span className="title">Contribute</span>
+              <h2>Preserve One Object</h2>
+              <p>
+                A house key is already loaded for a fast walkthrough. Press
+                Generate and Publish — or replace it with your own object.
+              </p>
+            </div>
+
+            <div className="demo-callout">
               <div>
-                <dt>Location</dt>
-                <dd>{exhibit.location}</dd>
+                <strong>
+                  {isDemoLoaded ? "Demo object ready" : "Custom object loaded"}
+                </strong>
+                <p>
+                  {isDemoLoaded
+                    ? "House key · “This opened my first home.” Click Generate and Publish to see the transformation."
+                    : "Your photo and sentence will become a 2526 exhibit, then enter the gallery and Census."}
+                </p>
+              </div>
+              {!isDemoLoaded ? (
+                <button onClick={loadDemoObject} type="button">
+                  Reload demo object
+                </button>
+              ) : null}
+            </div>
+
+            <ol className="contribute-steps">
+              <li className="is-active">1 · Photograph</li>
+              <li className={isCataloging || isPublished ? "is-active" : ""}>
+                2 · Transform
+              </li>
+              <li className={isPublished ? "is-active" : ""}>3 · Publish</li>
+            </ol>
+
+            <form className="contribute-form" onSubmit={publishExhibit}>
+              <label className="photo-drop">
+                <img alt="Object preview" src={imagePreview} />
+                <input
+                  accept="image/*"
+                  disabled={isCataloging}
+                  onChange={handleImage}
+                  type="file"
+                />
+                <span>{isCataloging ? "Cataloging…" : "Upload photo"}</span>
+              </label>
+
+              <div className="field-stack">
+                <label>
+                  What is it?
+                  <input
+                    disabled={isCataloging}
+                    onChange={(event) => {
+                      setObjectName(event.target.value);
+                      setIsPublished(false);
+                    }}
+                    required
+                    value={objectName}
+                  />
+                </label>
+                <label>
+                  What did it mean in 2026?
+                  <textarea
+                    disabled={isCataloging}
+                    maxLength={140}
+                    onChange={(event) => {
+                      setMeaning(event.target.value);
+                      setIsPublished(false);
+                    }}
+                    required
+                    value={meaning}
+                  />
+                  <span className="char-count">{meaning.length}/140</span>
+                </label>
+                <label>
+                  Location, optional
+                  <input
+                    disabled={isCataloging}
+                    onChange={(event) => setLocation(event.target.value)}
+                    placeholder="City or campus"
+                    value={location}
+                  />
+                </label>
+                <button
+                  className="theme-btn btn-style-one wide"
+                  disabled={isCataloging}
+                  type="submit"
+                >
+                  {isCataloging
+                    ? "Cataloging into 2526…"
+                    : isPublished
+                      ? "Publish Another Object"
+                      : "Generate and Publish"}
+                </button>
+                <p className={`public-note ${isPublished ? "is-published" : ""}`}>
+                  {isPublished
+                    ? "Published. Your exhibit is in the gallery below and the Census of Us has updated."
+                    : "Your contribution is preserved in this museum catalog and updates the public Census as you explore."}
+                </p>
+                {isPublished ? (
+                  <div className="post-publish-actions">
+                    <button
+                      className="text-link"
+                      onClick={() => goTo("detail")}
+                      type="button"
+                    >
+                      View transformed exhibit →
+                    </button>
+                    <button
+                      className="text-link"
+                      onClick={() => goTo("census")}
+                      type="button"
+                    >
+                      See Census update →
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <section className="event-section" id="museum">
+          <div className="auto-container">
+            <div className="sec-title-two text-center">
+              <span className="title">Exhibitions</span>
+              <h2>Newest in the Collection</h2>
+              <p>
+                {visitorContributions > 0
+                  ? `${visitorContributions} visitor contribution${visitorContributions === 1 ? "" : "s"} added to the opening collection.`
+                  : "Opening collection on view. Your contribution will appear at the top."}
+              </p>
+            </div>
+
+            <div className="event-grid">
+              {exhibits.map((exhibit) => (
+                <article
+                  className={
+                    selectedExhibit.id === exhibit.id
+                      ? "event-block selected"
+                      : "event-block"
+                  }
+                  key={exhibit.id}
+                >
+                  <button
+                    className="event-trigger"
+                    onClick={() => {
+                      setSelectedExhibit(exhibit);
+                      goTo("detail");
+                    }}
+                    type="button"
+                  >
+                    {justPublishedId === exhibit.id ? (
+                      <span className="new-badge">Just cataloged</span>
+                    ) : null}
+                    <div className="image-box">
+                      <img
+                        alt={exhibit.objectName}
+                        src={exhibit.originalImageUrl}
+                      />
+                    </div>
+                    <div className="lower-content">
+                      <div className="info">
+                        <span aria-hidden="true">◆</span>
+                        Theme <em>{exhibit.theme}</em>
+                      </div>
+                      <h3>{exhibit.futureTitle}</h3>
+                      <span className="read-more">
+                        View Exhibit <i>→</i>
+                      </span>
+                    </div>
+                  </button>
+                </article>
+              ))}
+            </div>
+
+            <div className="btn-box">
+              <button
+                className="theme-btn btn-style-two"
+                onClick={resetDemo}
+                type="button"
+              >
+                Restore Opening Collection
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section
+          className="testimonial-section"
+          style={{ backgroundImage: "url(/template/bg/2.png)" }}
+        >
+          <div className="auto-container">
+            <div className="sec-title-two text-center light">
+              <span className="title">Curatorial Voice</span>
+              <h2>Featured Exhibit, 2526</h2>
+            </div>
+            <article className="featured-exhibit">
+              <img
+                alt={generatedExhibit.objectName}
+                src={generatedExhibit.originalImageUrl}
+              />
+              <div>
+                <p className="catalog-line">
+                  AFTER US CATALOG · {formatCatalogDate(generatedExhibit.createdAt)}
+                </p>
+                <h3>{generatedExhibit.futureTitle}</h3>
+                <blockquote>“{generatedExhibit.userMeaning}”</blockquote>
+                <p>{generatedExhibit.futureInterpretation}</p>
+                <dl>
+                  <div>
+                    <dt>Object</dt>
+                    <dd>{generatedExhibit.objectName}</dd>
+                  </div>
+                  <div>
+                    <dt>Theme</dt>
+                    <dd>{generatedExhibit.theme}</dd>
+                  </div>
+                  <div>
+                    <dt>Category</dt>
+                    <dd>{generatedExhibit.category}</dd>
+                  </div>
+                </dl>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section className="fun-fact-section" id="census">
+          <div className="auto-container census-layout">
+            <div>
+              <div className="sec-title">
+                <span className="title">Census of Us</span>
+                <h2>What People Choose to Preserve</h2>
+              </div>
+              <p>
+                A public data hall inside the museum. These counts update live as
+                contributions enter the collection — patterns of belonging, care,
+                memory, and survival made visible.
+              </p>
+              <div className="census-number">
+                <strong>{exhibits.length}</strong>
+                <span>objects preserved</span>
+              </div>
+              {visitorContributions > 0 ? (
+                <p className="census-live">
+                  Including {visitorContributions} added in this visit.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="fact-grid">
+              {themeCounts.slice(0, 4).map(([theme, count]) => (
+                <div className="fact-column" key={theme}>
+                  <div className="inner">
+                    <div className="icon-box" aria-hidden="true">
+                      {Math.round((count / exhibits.length) * 100)}%
+                    </div>
+                    <h4>{theme}</h4>
+                    <p>
+                      {count} exhibit{count === 1 ? "" : "s"}
+                    </p>
+                    <div className="meter">
+                      <i style={{ width: `${(count / maxThemeCount) * 100}%` }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="category-panel">
+              <h3>Categories</h3>
+              {categoryCounts.map(([category, count]) => (
+                <p key={category}>
+                  <span>{category}</span>
+                  <i style={{ width: `${(count / maxCategoryCount) * 100}%` }} />
+                  <b>{count}</b>
+                </p>
+              ))}
+              <h3 className="recent-heading">Recent additions</h3>
+              <ul className="recent-list">
+                {recentExhibits.map((exhibit) => (
+                  <li key={exhibit.id}>
+                    <button
+                      onClick={() => {
+                        setSelectedExhibit(exhibit);
+                        goTo("detail");
+                      }}
+                      type="button"
+                    >
+                      <strong>{exhibit.futureTitle}</strong>
+                      <span>{exhibit.theme}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section className="detail-section" id="detail">
+          <div className="auto-container">
+            <div className="sec-title">
+              <span className="title">
+                {justPublishedId === selectedExhibit.id
+                  ? "Just Cataloged"
+                  : "Single Exhibit"}
+              </span>
+              <h2>{selectedExhibit.futureTitle}</h2>
+            </div>
+
+            {justPublishedId === selectedExhibit.id ? (
+              <div className="transform-banner">
+                Transformation complete — ordinary object from 2026, reframed as a
+                museum exhibit from 2526.
               </div>
             ) : null}
-          </dl>
-        </div>
-      </div>
-    </article>
-  );
-}
 
-function CensusHall({
-  categoryCounts,
-  exhibits,
-  themeCounts,
-}: {
-  categoryCounts: [string, number][];
-  exhibits: Exhibit[];
-  themeCounts: [string, number][];
-}) {
-  const maxCategoryCount = Math.max(...categoryCounts.map(([, count]) => count), 1);
+            <div className="transform-compare">
+              <article>
+                <p className="compare-label">2026 · As contributed</p>
+                <img
+                  alt={selectedExhibit.objectName}
+                  src={selectedExhibit.originalImageUrl}
+                />
+                <h3>{selectedExhibit.objectName}</h3>
+                <blockquote>“{selectedExhibit.userMeaning}”</blockquote>
+              </article>
+              <article className="compare-future">
+                <p className="compare-label">2526 · As cataloged</p>
+                <p className="catalog-line">
+                  AFTER US CATALOG · {formatCatalogDate(selectedExhibit.createdAt)}
+                </p>
+                <h3>{selectedExhibit.futureTitle}</h3>
+                <p>{selectedExhibit.futureInterpretation}</p>
+                <dl>
+                  <div>
+                    <dt>Theme</dt>
+                    <dd>{selectedExhibit.theme}</dd>
+                  </div>
+                  <div>
+                    <dt>Category</dt>
+                    <dd>{selectedExhibit.category}</dd>
+                  </div>
+                  <div>
+                    <dt>Material</dt>
+                    <dd>{selectedExhibit.material}</dd>
+                  </div>
+                  {selectedExhibit.location ? (
+                    <div>
+                      <dt>Location</dt>
+                      <dd>{selectedExhibit.location}</dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </article>
+            </div>
 
-  return (
-    <section className="census-hall">
-      <p className="catalog-line">Census of Us</p>
-      <h2>What people choose to preserve</h2>
-      <div className="census-number">
-        <strong>{exhibits.length}</strong>
-        <span>objects preserved</span>
-      </div>
-      <div className="census-columns">
-        <div>
-          <h3>Emotional themes</h3>
-          {themeCounts.map(([theme, count]) => (
-            <p key={theme}>
-              <span>{theme}</span>
-              <b>{count}</b>
-            </p>
-          ))}
+            <div className="detail-next">
+              <button
+                className="theme-btn btn-style-one"
+                onClick={() => goTo("census")}
+                type="button"
+              >
+                Explore Census of Us
+              </button>
+              <button
+                className="theme-btn btn-style-two"
+                onClick={() => goTo("museum")}
+                type="button"
+              >
+                Back to Gallery
+              </button>
+              <button
+                className="theme-btn btn-style-two"
+                onClick={loadDemoObject}
+                type="button"
+              >
+                Contribute Again
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="main-footer">
+        <div className="auto-container footer-grid">
+          <div>
+            <strong>AFTER US</strong>
+            <p>The Museum of Now · Catalog year 2526</p>
+          </div>
+          <div>
+            <button onClick={loadDemoObject} type="button">
+              Try Demo
+            </button>
+            <button onClick={() => goTo("museum")} type="button">
+              Gallery
+            </button>
+            <button onClick={() => goTo("census")} type="button">
+              Census
+            </button>
+          </div>
+          <p>
+            A living archive of ordinary human life — contribute one object and
+            watch the museum grow.
+          </p>
         </div>
-        <div>
-          <h3>Categories</h3>
-          {categoryCounts.map(([category, count]) => (
-            <p key={category}>
-              <span>{category}</span>
-              <i style={{ width: `${(count / maxCategoryCount) * 100}%` }} />
-              <b>{count}</b>
-            </p>
-          ))}
-        </div>
-      </div>
-    </section>
+      </footer>
+    </div>
   );
 }
 

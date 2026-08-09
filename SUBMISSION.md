@@ -10,23 +10,23 @@ Turn one ordinary object into a future museum exhibit from 2526.
 
 ## Deployed Link
 
-https://after-us-2526.info945348.chatgpt.site
+https://after-us-seven.vercel.app
 
 ## Short Description
 
-AFTER US asks people to photograph one ordinary object that matters to them, explain it in one sentence, and publish it into a shared future museum. The app transforms the object into a museum-grade exhibit with a title, curatorial interpretation, emotional theme, category, and public catalog framing. Each contribution updates the shared gallery and the Census of Us, a data hall showing what people choose to preserve.
+AFTER US asks people to photograph one ordinary object that matters to them, explain it in one sentence, and publish it into a shared future museum. The app transforms the object into a museum-grade exhibit with a title, curatorial interpretation, emotional theme, category, and public catalog framing. Each contribution updates the gallery and the Census of Us, a data hall showing what people choose to preserve.
 
-## Demo Script
+## How to Experience (no live demo needed)
 
-1. Open the deployed link.
-2. Use the default house key image and sentence: `This opened my first home.`
-3. Click `Generate and Publish`.
-4. Show the generated future exhibit in the museum.
-5. Scroll to the gallery and Census of Us to show the public archive and updated aggregate data.
+1. Open https://after-us-seven.vercel.app
+2. Click **Try the Ready Demo** (house key is preloaded)
+3. Click **Generate and Publish**
+4. See the 2026 → 2526 transformation on the exhibit page
+5. Scroll to the gallery and Census of Us to see the collection and counts update
 
 ## Built With
 
-React, TypeScript, Vite, local browser persistence, generated visual assets, and OpenAI Sites hosting.
+React, TypeScript, Vite, local browser persistence, art-directed visual assets, and Vercel hosting.
 
 ## Track Fit
 
@@ -36,4 +36,4 @@ Best Use of Reve: the product is designed around strong visual storytelling and 
 
 ## Notes for Judges
 
-The MVP uses local browser persistence so the demo remains fast and reliable during judging. The product model is designed to extend into shared storage without changing the core contribution -> transform -> publish -> accumulate flow.
+The MVP uses local browser persistence so the experience stays fast and reliable during judging. The product model is designed to extend into shared storage without changing the core contribute → transform → publish → accumulate flow.
