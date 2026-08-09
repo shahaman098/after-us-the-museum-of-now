@@ -7,6 +7,8 @@ coverage/
 site/
 .playwright-cli/
 output/
+work/
 *.tsbuildinfo
 vite.config.d.ts
 vite.config.js
+.vercel
